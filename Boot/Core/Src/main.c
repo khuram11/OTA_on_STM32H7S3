@@ -22,7 +22,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "ota_bootloader.h"
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,7 +48,7 @@ UART_HandleTypeDef huart4;
 XSPI_HandleTypeDef hxspi2;
 
 /* USER CODE BEGIN PV */
-
+static uint32_t g_jumpAddress = SLOT_A_CPU_ADDR;  /* Default to Slot A */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,12 +59,37 @@ static void MX_SBS_Init(void);
 static void MX_UART4_Init(void);
 static void MX_XSPI2_Init(void);
 /* USER CODE BEGIN PFP */
-
+static void Boot_PrintString(const char *str);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static void Boot_PrintString(const char *str)
+{
+    HAL_UART_Transmit(&huart4, (uint8_t *)str, strlen(str), 1000);
+}
 
+static void Boot_PrintHex(uint32_t val)
+{
+    char buf[12];
+    char *p = buf + 10;
+    buf[10] = '\r';
+    buf[11] = '\n';
+
+    for (int i = 0; i < 8; i++)
+    {
+        p--;
+        uint8_t nibble = val & 0x0F;
+        *p = (nibble < 10) ? ('0' + nibble) : ('A' + nibble - 10);
+        val >>= 4;
+    }
+    p--;
+    *p = 'x';
+    p--;
+    *p = '0';
+
+    HAL_UART_Transmit(&huart4, (uint8_t *)p, 12, 1000);
+}
 /* USER CODE END 0 */
 
 /**
@@ -101,10 +127,31 @@ int main(void)
   MX_GPIO_Init();
   MX_SBS_Init();
   MX_UART4_Init();
-  MX_XSPI2_Init();
-  MX_EXTMEM_MANAGER_Init();
+
   /* USER CODE BEGIN 2 */
-  HAL_UART_Transmit(&huart4,(uint8_t *)"BOOT STARTED\r\nJUMPING TO MAIN\r\n", sizeof "BOOT STARTED\r\nJUMPING TO MAIN\r\n", 1000);
+  Boot_PrintString("\r\n========================================\r\n");
+  Boot_PrintString("       OTA BOOTLOADER STARTED\r\n");
+  Boot_PrintString("========================================\r\n");
+
+  Boot_PrintString("[BOOT] Initializing XSPI2...\r\n");
+  MX_XSPI2_Init();
+
+  Boot_PrintString("[BOOT] Checking for OTA update...\r\n");
+  g_jumpAddress = OTA_Bootloader_Process();
+
+  Boot_PrintString("[BOOT] Jump address: ");
+  Boot_PrintHex(g_jumpAddress);
+
+  Boot_PrintString("[BOOT] Initializing ExtMemManager (XIP mode)...\r\n");
+  MX_EXTMEM_MANAGER_Init();
+
+  Boot_PrintString("[BOOT] Jumping to application...\r\n");
+  Boot_PrintString("========================================\r\n\r\n");
+
+  HAL_Delay(50);
+
+  OTA_Bootloader_JumpToApp(g_jumpAddress);
+
   /* USER CODE END 2 */
 
   /* Launch the application */
@@ -112,6 +159,8 @@ int main(void)
   {
     Error_Handler();
   }
+//  EXTMEM_MemoryMappedMode(EXTMEMORY_1, EXTMEM_ENABLE);
+//  EXTMEM_MemoryMappedMode(EXTMEMORY_1, EXTMEM_DISABLE);
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)

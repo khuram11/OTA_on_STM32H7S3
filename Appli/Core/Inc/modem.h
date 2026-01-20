@@ -48,7 +48,6 @@ typedef enum {
     OTA_TIMEOUT,
     OTA_HTTP_ERROR,
     OTA_SIZE_ERROR,
-    OTA_FLASH_ERROR
 } OTA_Status_t;
 
 /* Function prototypes */
