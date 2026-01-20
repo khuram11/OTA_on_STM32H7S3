@@ -158,13 +158,8 @@ int main(void)
       uint32_t size = OTA_GetFirmwareSize();
       printf("Size : %ld\n", size);
       /* Now you can flash it or verify CRC */
-      // OTA_VerifyFirmwareCRC(0xA3B2C1D0);
+       OTA_VerifyFirmwareCRC();
   }
-  printf("[MODEM] Turning off modem\r\n");
-  HAL_GPIO_WritePin(MODEM_PWR_OFF_GPIO_Port, MODEM_PWR_OFF_Pin, 0);
-//  uint32_t len = 0;
-//  OTA_DownloadFirmware_v2("https://github.com/khuram11/ota_test/releases/download/binaryfile/fw_with_crc.bin", &len);
-
 
   /* USER CODE END 2 */
 
@@ -172,13 +167,26 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  HAL_Delay(50000);
+	  if (OTA_TestDownload() == MODEM_OK)
+	  {
+	      printf("Firmware downloaded successfully!\r\n");
+
+	      /* Access the firmware data */
+	      uint8_t *fw = OTA_GetFirmwareBuffer();
+	      (void)fw;
+	      uint32_t size = OTA_GetFirmwareSize();
+	      printf("Size : %ld\n", size);
+	      /* Now you can flash it or verify CRC */
+	       OTA_VerifyFirmwareCRC();
+	  }
 
     /* USER CODE END WHILE */
     MX_USB_HOST_Process();
 
     /* USER CODE BEGIN 3 */
 	  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-	  HAL_Delay(500);
+
   }
   /* USER CODE END 3 */
 }

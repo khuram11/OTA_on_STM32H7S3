@@ -58,7 +58,7 @@ Modem_Status_t OTA_TestDownload(void);
 OTA_Status_t OTA_DownloadFirmware_v2(const char *url, uint32_t *downloadedSize);
 
 
-
+Modem_Status_t OTA_VerifyFirmwareCRC(void);
 
 
 

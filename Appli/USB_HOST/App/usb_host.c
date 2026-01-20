@@ -20,7 +20,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+extern volatile uint8_t ota_started;
 /* Buffer sizes */
 #define CDC_RX_BUFFER_SIZE  2048
 #define CDC_TX_BUFFER_SIZE  512
@@ -341,8 +341,12 @@ static void USBH_UserProcess  (USBH_HandleTypeDef *phost, uint8_t id)
 
 void USBH_CDC_ReceiveCallback(USBH_HandleTypeDef *phost)
 {
+
     CDC_RxLength = USBH_CDC_GetLastReceivedDataSize(phost);
+//    printf("rec len %ld\n",CDC_RxLength);
     CDC_RxComplete = 1;
+    if(ota_started) USBH_CDC_Receive(phost, CDC_RxBuffer, CDC_RX_BUFFER_SIZE);
+
 
 }
 

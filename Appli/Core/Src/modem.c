@@ -24,7 +24,7 @@ extern ApplicationTypeDef Appli_state;
 
 static uint8_t modemInitialized = 0;
 
-
+volatile uint8_t ota_started = 0;
 
 /*============================================================================*/
 /*                          HELPER FUNCTIONS                                  */
@@ -737,7 +737,7 @@ Modem_Status_t Modem_WaitForHTTPAction(int method, uint32_t timeout, int *httpSt
     {
         MX_USB_HOST_Process();
         USB_CDC_StartReceive();
-        HAL_Delay(500);
+        HAL_Delay(2);
         MX_USB_HOST_Process();
         USB_CDC_ProcessReceive();
 
@@ -1080,7 +1080,7 @@ static uint32_t OTA_ParseChunkLength(uint8_t *dataMarker)
 Modem_Status_t OTA_ReadBinaryChunk(uint32_t offset, uint32_t length, uint8_t *buffer, uint32_t *bytesRead)
 {
     char cmd[64];
-    uint8_t rxBuffer[1024];
+    uint8_t rxBuffer[2048];
     uint32_t rxIdx = 0;
     uint32_t start = HAL_GetTick();
     uint8_t endMarkerFound = 0;
@@ -1094,25 +1094,27 @@ Modem_Status_t OTA_ReadBinaryChunk(uint32_t offset, uint32_t length, uint8_t *bu
     USB_CDC_FlushRx();
     memset(rxBuffer, 0, sizeof(rxBuffer));
 
-    printf("[TX] %s", cmd);
+//    printf("[TX] %s", cmd);
     if (USB_CDC_Transmit((uint8_t*)cmd, strlen(cmd), 1000) != HAL_OK)
     {
         return MODEM_ERROR;
     }
-
+    ota_started = 1;
+    USB_CDC_StartReceive();
     /* Collect response - wait for +HTTPREAD: 0 end marker */
     while ((HAL_GetTick() - start) < 10000 && !endMarkerFound)
     {
+
         MX_USB_HOST_Process();
-        USB_CDC_StartReceive();
-        HAL_Delay(2);
-        MX_USB_HOST_Process();
+//        USB_CDC_StartReceive();
+//        HAL_Delay(5);
+//        MX_USB_HOST_Process();
         USB_CDC_ProcessReceive();
 
         uint32_t available = USB_CDC_GetRxAvailable();
         if (available > 0)
         {
-            uint8_t buf[1024];
+            uint8_t buf[2048];
             uint32_t len = USB_CDC_Read(buf, sizeof(buf));
 
             if ((rxIdx + len) < sizeof(rxBuffer))
@@ -1330,20 +1332,21 @@ Modem_Status_t OTA_DownloadFirmware(const char *url)
         Modem_SendCommand("AT+HTTPTERM\r\n", response, sizeof(response), 1000);
         return MODEM_ERROR;
     }
-
-
-    Modem_SendCommand("AT+HTTPHEAD\r\n", response, sizeof(response), 5000);
-	printf("--- HEADERS ---\r\n%s\r\n---------------\r\n", response);
-	HAL_Delay(5000);
-
-
     g_fwSize = totalSize;
-    HAL_Delay(2000);  /* Wait for data to be ready */
-
-    /* Step 4: Check available data */
-    printf("[OTA] Step 4: Check buffer\r\n");
-    Modem_SendCommandWaitURC("AT+HTTPREAD?\r\n", "+HTTPREAD", response, sizeof(response), 5000);
     HAL_Delay(5000);
+
+//
+//    Modem_SendCommand("AT+HTTPHEAD\r\n", response, sizeof(response), 5000);
+//	printf("--- HEADERS ---\r\n%s\r\n---------------\r\n", response);
+//
+
+
+//    HAL_Delay(2000);  /* Wait for data to be ready */
+//
+//    /* Step 4: Check available data */
+//    printf("[OTA] Step 4: Check buffer\r\n");
+//    Modem_SendCommandWaitURC("AT+HTTPREAD?\r\n", "+HTTPREAD", response, sizeof(response), 5000);
+//    HAL_Delay(5000);
 
     /* Step 5: Download in chunks */
     printf("[OTA] Step 5: Downloading %lu bytes in %lu chunks\r\n",
@@ -1361,11 +1364,11 @@ Modem_Status_t OTA_DownloadFirmware(const char *url)
 
         if (result != MODEM_OK)
         {
-            printf("[OTA] Failed to read chunk at offset %lu\r\n", downloaded);
+            printf("[OTA] Failed to read chunk at offset--------------------------------------------------------------------------------------------  %lu\r\n", downloaded);
         }
         else if (bytesRead == 0)
         {
-            printf("[OTA] Zero bytes read at offset %lu\r\n", downloaded);
+            printf("[OTA] Zero bytes read at offset-------------------------------------------------------------------------------------------- %lu\r\n", downloaded);
             result = MODEM_ERROR;
         }
         else
@@ -1380,6 +1383,7 @@ Modem_Status_t OTA_DownloadFirmware(const char *url)
             HAL_Delay(1);
         }
     }
+    ota_started = 0;
 
     /* Cleanup */
     printf("[OTA] Step 6: Cleanup\r\n");
@@ -1411,38 +1415,71 @@ Modem_Status_t OTA_DownloadFirmware(const char *url)
  * @param  expectedCRC: Expected CRC32 value
  * @retval MODEM_OK if CRC matches
  */
-Modem_Status_t OTA_VerifyFirmwareCRC(uint32_t expectedCRC)
+#define OTA_HEADER_SIZE   16
+#define OTA_MAGIC         0x4F544131  /* "OTA1" */
+Modem_Status_t OTA_VerifyFirmwareCRC(void)
 {
+    uint32_t magic;
+    uint32_t fwSize;
+    uint32_t expectedCRC;
+    uint32_t version;
     uint32_t crc = 0xFFFFFFFF;
 
-    for (uint32_t i = 0; i < g_fwDownloaded; i++)
+    /* Sanity check */
+    if (g_fwDownloaded < OTA_HEADER_SIZE)
+    {
+        printf("[OTA] Image too small\r\n");
+        return MODEM_ERROR;
+    }
+
+    /* Extract header (little endian) */
+    memcpy(&magic,       &g_fwBuffer[0],  4);
+    memcpy(&fwSize,      &g_fwBuffer[4],  4);
+    memcpy(&expectedCRC, &g_fwBuffer[8],  4);
+    memcpy(&version,     &g_fwBuffer[12], 4);
+
+    /* Validate magic */
+    if (magic != OTA_MAGIC)
+    {
+        printf("[OTA] Invalid magic: 0x%08lX\r\n", magic);
+        return MODEM_ERROR;
+    }
+
+    /* Validate size */
+    if ((fwSize + OTA_HEADER_SIZE) != g_fwDownloaded)
+    {
+        printf("[OTA] Size mismatch. Header: %lu, Received: %lu\r\n",
+               fwSize, g_fwDownloaded - OTA_HEADER_SIZE);
+        return MODEM_ERROR;
+    }
+
+    /* CRC32 over firmware only (skip header) */
+    for (uint32_t i = OTA_HEADER_SIZE; i < g_fwDownloaded; i++)
     {
         crc ^= g_fwBuffer[i];
         for (uint32_t j = 0; j < 8; j++)
         {
             if (crc & 1)
-            {
                 crc = (crc >> 1) ^ 0xEDB88320;
-            }
             else
-            {
                 crc >>= 1;
-            }
         }
     }
 
     crc ^= 0xFFFFFFFF;
 
-    printf("[OTA] Calculated CRC: 0x%08lX\r\n", crc);
-    printf("[OTA] Expected CRC:   0x%08lX\r\n", expectedCRC);
+    printf("[OTA] Version		:	0x%08lX\r\n", version);
+    printf("[OTA] Firmware size	:	%lu bytes\r\n", fwSize);
+    printf("[OTA] Calculated CRC:	0x%08lX\r\n", crc);
+    printf("[OTA] Expected CRC	:   0x%08lX\r\n", expectedCRC);
 
     if (crc == expectedCRC)
     {
-        printf("[OTA] CRC VALID!\r\n");
+        printf("[OTA] CRC VALID\r\n");
         return MODEM_OK;
     }
 
-    printf("[OTA] CRC MISMATCH!\r\n");
+    printf("[OTA] CRC MISMATCH\r\n");
     return MODEM_ERROR;
 }
 
@@ -1473,7 +1510,7 @@ void OTA_TestChunkSizes(void)
 
     int httpStatus;
     uint32_t totalSize;
-    Modem_WaitForHTTPAction(0, 60000, &httpStatus, &totalSize);
+    Modem_WaitForHTTPAction(0, 20000, &httpStatus, &totalSize);
 
     if (httpStatus != 200)
     {
