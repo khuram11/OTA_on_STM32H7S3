@@ -662,107 +662,82 @@ USBH_StatusTypeDef USBH_Process(USBH_HandleTypeDef *phost)
       break;
 
     case HOST_CHECK_CLASS:
-        if (phost->ClassNumber == 0U)
+
+      if (phost->ClassNumber == 0U)
+      {
+        USBH_UsrLog("No Class has been registered.");
+      }
+      else
+      {
+        phost->pActiveClass = NULL;
+
+        for (idx = 0U; idx < USBH_MAX_NUM_SUPPORTED_CLASS; idx++)
         {
-            USBH_UsrLog("No Class has been registered.");
+          if (phost->pClass[idx]->ClassCode == phost->device.CfgDesc.Itf_Desc[0].bInterfaceClass)
+          {
+            phost->pActiveClass = phost->pClass[idx];
+            break;
+          }
         }
-        else
-        {
-            phost->pActiveClass = NULL;
 
-            /* Print interfaces for debug */
-            USBH_UsrLog("=== DEVICE INTERFACES ===");
-            for (uint8_t i = 0U; i < phost->device.CfgDesc.bNumInterfaces; i++)
-            {
-                USBH_UsrLog("IF%d: Class=0x%02X Sub=0x%02X Proto=0x%02X EPs=%d",
-                           i,
-                           phost->device.CfgDesc.Itf_Desc[i].bInterfaceClass,
-                           phost->device.CfgDesc.Itf_Desc[i].bInterfaceSubClass,
-                           phost->device.CfgDesc.Itf_Desc[i].bInterfaceProtocol,
-                           phost->device.CfgDesc.Itf_Desc[i].bNumEndpoints);
-            }
-            USBH_UsrLog("=========================");
-
-            /* Try matching on interface 0 first */
-            for (idx = 0U; idx < phost->ClassNumber; idx++)
-            {
-                if (phost->pClass[idx]->ClassCode == phost->device.CfgDesc.Itf_Desc[0].bInterfaceClass)
-                {
-                    phost->pActiveClass = phost->pClass[idx];
-                    break;
-                }
-            }
-
-            /* Force CDC for known modem VIDs */
-            if (phost->pActiveClass == NULL)
-            {
-                uint16_t vid = phost->device.DevDesc.idVendor;
-
-                if ((vid == 0x1E0E) ||  /* SIMCOM */
-                    (vid == 0x2C7C) ||  /* Quectel */
-                    (vid == 0x05C6))    /* Qualcomm */
-                {
-                    for (idx = 0U; idx < phost->ClassNumber; idx++)
-                    {
-                        if ((phost->pClass[idx]->ClassCode == 0x02U) ||
-                            (phost->pClass[idx]->ClassCode == 0xFFU))
-                        {
-                            phost->pActiveClass = phost->pClass[idx];
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (phost->pActiveClass != NULL)
-            {
-                if (phost->pActiveClass->Init(phost) == USBH_OK)
-                {
-                    phost->gState = HOST_CLASS_REQUEST;
-                    USBH_UsrLog("%s class started.", phost->pActiveClass->Name);
-                    phost->pUser(phost, HOST_USER_CLASS_SELECTED);
-                }
-                else
-                {
-                    phost->gState = HOST_ABORT_STATE;
-                    USBH_UsrLog("Device not supporting %s class.", phost->pActiveClass->Name);
-                }
-            }
-            else
-            {
-                phost->gState = HOST_ABORT_STATE;
-                USBH_UsrLog("No registered class for this device.");
-            }
-        }
-        break;
-
-    case HOST_CLASS_REQUEST:
         if (phost->pActiveClass != NULL)
         {
-            status = phost->pActiveClass->Requests(phost);
+          if (phost->pActiveClass->Init(phost) == USBH_OK)
+          {
+            phost->gState = HOST_CLASS_REQUEST;
+            USBH_UsrLog("%s class started.", phost->pActiveClass->Name);
 
-            if (status == USBH_OK)
-            {
-                phost->gState = HOST_CLASS;
-
-                /* ADD THIS: Notify user that class is active */
-                if (phost->pUser != NULL)
-                {
-                    phost->pUser(phost, HOST_USER_CLASS_ACTIVE);
-                }
-            }
-            else if (status == USBH_FAIL)
-            {
-                phost->gState = HOST_ABORT_STATE;
-                USBH_ErrLog("Device not responding Please Unplug.");
-            }
+            /* Inform user that a class has been activated */
+            phost->pUser(phost, HOST_USER_CLASS_SELECTED);
+          }
+          else
+          {
+            phost->gState = HOST_ABORT_STATE;
+            USBH_UsrLog("Device not supporting %s class.", phost->pActiveClass->Name);
+          }
         }
         else
         {
-            phost->gState = HOST_ABORT_STATE;
-            USBH_ErrLog("Invalid Class Driver.");
+          phost->gState = HOST_ABORT_STATE;
+          USBH_UsrLog("No registered class for this device.");
         }
-        break;
+      }
+
+#if (USBH_USE_OS == 1U)
+      USBH_OS_PutMessage(phost, USBH_STATE_CHANGED_EVENT, 0U, 0U);
+#endif /* (USBH_USE_OS == 1U) */
+      break;
+
+    case HOST_CLASS_REQUEST:
+      /* process class standard control requests state machine */
+      if (phost->pActiveClass != NULL)
+      {
+        status = phost->pActiveClass->Requests(phost);
+
+        if (status == USBH_OK)
+        {
+          phost->gState = HOST_CLASS;
+        }
+        else if (status == USBH_FAIL)
+        {
+          phost->gState = HOST_ABORT_STATE;
+          USBH_ErrLog("Device not responding Please Unplug.");
+        }
+        else
+        {
+          /* .. */
+        }
+      }
+      else
+      {
+        phost->gState = HOST_ABORT_STATE;
+        USBH_ErrLog("Invalid Class Driver.");
+      }
+
+#if (USBH_USE_OS == 1U)
+        USBH_OS_PutMessage(phost, USBH_STATE_CHANGED_EVENT, 0U, 0U);
+#endif /* (USBH_USE_OS == 1U) */
+      break;
 
     case HOST_CLASS:
       /* process class state machine */

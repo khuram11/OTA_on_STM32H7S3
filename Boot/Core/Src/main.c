@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "ota_bootloader.h"
 #include <string.h>
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,6 +44,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 
+MMC_HandleTypeDef hmmc1;
+
 UART_HandleTypeDef huart4;
 
 XSPI_HandleTypeDef hxspi2;
@@ -58,6 +61,7 @@ static void MX_GPIO_Init(void);
 static void MX_SBS_Init(void);
 static void MX_UART4_Init(void);
 static void MX_XSPI2_Init(void);
+static void MX_SDMMC1_MMC_Init(void);
 /* USER CODE BEGIN PFP */
 static void Boot_PrintString(const char *str);
 /* USER CODE END PFP */
@@ -127,8 +131,27 @@ int main(void)
   MX_GPIO_Init();
   MX_SBS_Init();
   MX_UART4_Init();
-
+  MX_XSPI2_Init();
+  MX_SDMMC1_MMC_Init();
+  MX_EXTMEM_MANAGER_Init();
   /* USER CODE BEGIN 2 */
+
+  HAL_MMC_CardInfoTypeDef cardInfo;
+  	if (HAL_MMC_GetCardInfo(&hmmc1, &cardInfo) == HAL_OK) {
+  		char msg[128];
+  		uint64_t totalSize = (uint64_t) cardInfo.LogBlockNbr
+  				* cardInfo.LogBlockSize;
+
+  		sprintf(msg, "eMMC size: %lu blocks of %lu bytes = %.2f MB\r\n",
+  				cardInfo.LogBlockNbr, cardInfo.LogBlockSize,
+  				(float) totalSize / (1024 * 1024));
+
+  		HAL_UART_Transmit(&huart4, (uint8_t*) msg, strlen(msg), HAL_MAX_DELAY);
+  	} else {
+  		char *err = "Error getting eMMC card info\r\n";
+  		HAL_UART_Transmit(&huart4, (uint8_t*) err, strlen(err), HAL_MAX_DELAY);
+  	}
+
   Boot_PrintString("\r\n========================================\r\n");
   Boot_PrintString("       OTA BOOTLOADER STARTED\r\n");
   Boot_PrintString("========================================\r\n");
@@ -159,8 +182,6 @@ int main(void)
   {
     Error_Handler();
   }
-//  EXTMEM_MemoryMappedMode(EXTMEMORY_1, EXTMEM_ENABLE);
-//  EXTMEM_MemoryMappedMode(EXTMEMORY_1, EXTMEM_DISABLE);
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -203,7 +224,16 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL1.PLLS = 2;
   RCC_OscInitStruct.PLL1.PLLT = 2;
   RCC_OscInitStruct.PLL1.PLLFractional = 0;
-  RCC_OscInitStruct.PLL2.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL2.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL2.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL2.PLLM = 6;
+  RCC_OscInitStruct.PLL2.PLLN = 100;
+  RCC_OscInitStruct.PLL2.PLLP = 2;
+  RCC_OscInitStruct.PLL2.PLLQ = 2;
+  RCC_OscInitStruct.PLL2.PLLR = 2;
+  RCC_OscInitStruct.PLL2.PLLS = 2;
+  RCC_OscInitStruct.PLL2.PLLT = 2;
+  RCC_OscInitStruct.PLL2.PLLFractional = 0;
   RCC_OscInitStruct.PLL3.PLLState = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -247,6 +277,37 @@ static void MX_SBS_Init(void)
   /* USER CODE BEGIN SBS_Init 2 */
 
   /* USER CODE END SBS_Init 2 */
+
+}
+
+/**
+  * @brief SDMMC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SDMMC1_MMC_Init(void)
+{
+
+  /* USER CODE BEGIN SDMMC1_Init 0 */
+
+  /* USER CODE END SDMMC1_Init 0 */
+
+  /* USER CODE BEGIN SDMMC1_Init 1 */
+
+  /* USER CODE END SDMMC1_Init 1 */
+  hmmc1.Instance = SDMMC1;
+  hmmc1.Init.ClockEdge = SDMMC_CLOCK_EDGE_RISING;
+  hmmc1.Init.ClockPowerSave = SDMMC_CLOCK_POWER_SAVE_DISABLE;
+  hmmc1.Init.BusWide = SDMMC_BUS_WIDE_8B;
+  hmmc1.Init.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_ENABLE;
+  hmmc1.Init.ClockDiv = 2;
+  if (HAL_MMC_Init(&hmmc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SDMMC1_Init 2 */
+
+  /* USER CODE END SDMMC1_Init 2 */
 
 }
 
@@ -359,6 +420,9 @@ static void MX_GPIO_Init(void)
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPION_CLK_ENABLE();
 
