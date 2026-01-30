@@ -18,14 +18,14 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "extmem_manager.h"
 #include "usb_host.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "modem.h"
+//#include "modem.h"
 #include <stdio.h>
 #include <string.h>
+//#include "xspi2_flash_driver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,10 +49,7 @@ MMC_HandleTypeDef hmmc1;
 
 UART_HandleTypeDef huart4;
 
-XSPI_HandleTypeDef hxspi2;
-
 /* USER CODE BEGIN PV */
-/* OTA Configuration - modify for your server */
 
 
 uint8_t uart4_rx_byte;
@@ -62,8 +59,8 @@ uint8_t uart4_rx_byte;
 static void MPU_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_UART4_Init(void);
-static void MX_XSPI2_Init(void);
 static void MX_SDMMC1_MMC_Init(void);
+static void MX_SBS_Init(void);
 void MX_USB_HOST_Process(void);
 
 /* USER CODE BEGIN PFP */
@@ -96,7 +93,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         HAL_UART_Receive_IT(&huart4, &uart4_rx_byte, 1);
    }
 }
-
 
 
 /* USER CODE END 0 */
@@ -145,39 +141,61 @@ int main(void)
   MX_GPIO_Init();
   MX_USB_HOST_Init();
   MX_UART4_Init();
-//  MX_XSPI2_Init();
   MX_SDMMC1_MMC_Init();
-//  MX_EXTMEM_MANAGER_Init();
+  MX_SBS_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&huart4, &uart4_rx_byte, 1);
-  printf("MAIN APPLICATION STARTED\r\n");
+  printf("OTA APPLICATION STARTED\r\n");
+  while(1)
+  {
+	  printf("OTA APPLICATION runnning\r\n");
+	  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+	  HAL_Delay(5000);
+  }
 
-  HAL_MMC_CardInfoTypeDef cardInfo;
-  	if (HAL_MMC_GetCardInfo(&hmmc1, &cardInfo) == HAL_OK) {
-  		char msg[128];
-  		uint64_t totalSize = (uint64_t) cardInfo.LogBlockNbr
-  				* cardInfo.LogBlockSize;
+//  if(0 == Test_Flash_Write())
+//  {
+//	  //Flast test succesful
+//	  while(1);
+//  }
+//  uint8_t read_data[10] = {0};
+//  uint8_t data[] = {0xDE, 0xED, 0xBE, 0xEF};
+//  EXTMEM_StatusTypeDef res =EXTMEM_MemoryMappedMode(EXTMEMORY_1, EXTMEM_DISABLE);
+//  res = EXTMEM_Read(EXTMEMORY_1, 0x1000000, read_data, 4);
+//  res = EXTMEM_EraseSector(EXTMEMORY_1, 0x1000000, 100);
+//  res = EXTMEM_Write(EXTMEMORY_1, 0x1000000, data, sizeof data);
+//  res = EXTMEM_Read(EXTMEMORY_1, 0x1000000, read_data, 4);
 
-  		sprintf(msg, "eMMC size: %lu blocks of %lu bytes = %.2f MB\r\n",
-  				cardInfo.LogBlockNbr, cardInfo.LogBlockSize,
-  				(float) totalSize / (1024 * 1024));
-
-  		HAL_UART_Transmit(&huart4, (uint8_t*) msg, strlen(msg), HAL_MAX_DELAY);
-  	} else {
-  		char *err = "Error getting eMMC card info\r\n";
-  		HAL_UART_Transmit(&huart4, (uint8_t*) err, strlen(err), HAL_MAX_DELAY);
-  	}
-
-  HAL_PWREx_EnableUSBHSregulator();
-  HAL_Delay(100);
-
-  MX_USB_HOST_Init();
-
-  //disabling SOF interrupts
-  USB_OTG_HS->GINTMSK &= ~USB_OTG_GINTMSK_SOFM;
-  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
-
-  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, 1);
+//  while(1);
+//
+//
+//
+//  HAL_MMC_CardInfoTypeDef cardInfo;
+//  	if (HAL_MMC_GetCardInfo(&hmmc1, &cardInfo) == HAL_OK) {
+//  		char msg[128];
+//  		uint64_t totalSize = (uint64_t) cardInfo.LogBlockNbr
+//  				* cardInfo.LogBlockSize;
+//
+//  		sprintf(msg, "eMMC size: %lu blocks of %lu bytes = %.2f MB\r\n",
+//  				cardInfo.LogBlockNbr, cardInfo.LogBlockSize,
+//  				(float) totalSize / (1024 * 1024));
+//
+//  		HAL_UART_Transmit(&huart4, (uint8_t*) msg, strlen(msg), HAL_MAX_DELAY);
+//  	} else {
+//  		char *err = "Error getting eMMC card info\r\n";
+//  		HAL_UART_Transmit(&huart4, (uint8_t*) err, strlen(err), HAL_MAX_DELAY);
+//  	}
+//
+//  HAL_PWREx_EnableUSBHSregulator();
+//  HAL_Delay(100);
+//
+//  MX_USB_HOST_Init();
+//
+//  //disabling SOF interrupts
+//  USB_OTG_HS->GINTMSK &= ~USB_OTG_GINTMSK_SOFM;
+//  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
+//
+//  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, 1);
 
 //  uint8_t data[] = {0xDE, 0xED, 0xBE, 0xEF};
 //  EXTMEM_StatusTypeDef res = EXTMEM_MemoryMappedMode(EXTMEMORY_1, EXTMEM_DISABLE);
@@ -189,11 +207,11 @@ int main(void)
 
 
 
-  if(MODEM_OK != Modem_Init())
-  {
-	  printf("[MODEM] FAILED to Initialize the Modem\r\n");
-	  while(1);
-  }
+//  if(MODEM_OK != Modem_Init())
+//  {
+//	  printf("[MODEM] FAILED to Initialize the Modem\r\n");
+//	  while(1);
+//  }
 
 
 
@@ -202,22 +220,22 @@ int main(void)
 
 // OTA_TestChunkSizes();
 
-  if (OTA_TestDownload() == MODEM_OK)
-  {
-      printf("Firmware downloaded successfully!\r\n");
-
-      /* Access the firmware data */
-      uint8_t *fw = OTA_GetFirmwareBuffer();
-
-      uint32_t size = OTA_GetFirmwareSize();
-      printf("Size : %ld\n", size);
-      /* Now you can flash it or verify CRC */
-      if(OTA_VerifyFirmwareCRC() == MODEM_OK)
-      {
-
-      }
-
-  }
+//  if (OTA_TestDownload() == MODEM_OK)
+//  {
+//      printf("Firmware downloaded successfully!\r\n");
+//
+//      /* Access the firmware data */
+//      uint8_t *fw = OTA_GetFirmwareBuffer();
+//
+//      uint32_t size = OTA_GetFirmwareSize();
+//      printf("Size : %ld\n", size);
+//      /* Now you can flash it or verify CRC */
+//      if(OTA_VerifyFirmwareCRC() == MODEM_OK)
+//      {
+//
+//      }
+//
+//  }
 
   /* USER CODE END 2 */
 
@@ -225,28 +243,49 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  HAL_Delay(50000);
-	  if (OTA_TestDownload() == MODEM_OK)
-	  {
-	      printf("Firmware downloaded successfully!\r\n");
-
-	      /* Access the firmware data */
-	      uint8_t *fw = OTA_GetFirmwareBuffer();
-	      (void)fw;
-	      uint32_t size = OTA_GetFirmwareSize();
-	      printf("Size : %ld\n", size);
-	      /* Now you can flash it or verify CRC */
-	       OTA_VerifyFirmwareCRC();
-	  }
-
-    /* USER CODE END WHILE */
-    MX_USB_HOST_Process();
-
-    /* USER CODE BEGIN 3 */
-	  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+//	  HAL_Delay(50000);
+//	  if (OTA_TestDownload() == MODEM_OK)
+//	  {
+//	      printf("Firmware downloaded successfully!\r\n");
+//
+//	      /* Access the firmware data */
+//	      uint8_t *fw = OTA_GetFirmwareBuffer();
+//	      (void)fw;
+//	      uint32_t size = OTA_GetFirmwareSize();
+//	      printf("Size : %ld\n", size);
+//	      /* Now you can flash it or verify CRC */
+//	       OTA_VerifyFirmwareCRC();
+//	  }
+//
+//    /* USER CODE END WHILE */
+//    MX_USB_HOST_Process();
+//
+//    /* USER CODE BEGIN 3 */
+//	  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 
   }
   /* USER CODE END 3 */
+}
+
+/**
+  * @brief SBS Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SBS_Init(void)
+{
+
+  /* USER CODE BEGIN SBS_Init 0 */
+
+  /* USER CODE END SBS_Init 0 */
+
+  /* USER CODE BEGIN SBS_Init 1 */
+
+  /* USER CODE END SBS_Init 1 */
+  /* USER CODE BEGIN SBS_Init 2 */
+
+  /* USER CODE END SBS_Init 2 */
+
 }
 
 /**
@@ -329,56 +368,6 @@ static void MX_UART4_Init(void)
 }
 
 /**
-  * @brief XSPI2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_XSPI2_Init(void)
-{
-
-  /* USER CODE BEGIN XSPI2_Init 0 */
-
-  /* USER CODE END XSPI2_Init 0 */
-
-  XSPIM_CfgTypeDef sXspiManagerCfg = {0};
-
-  /* USER CODE BEGIN XSPI2_Init 1 */
-
-  /* USER CODE END XSPI2_Init 1 */
-  /* XSPI2 parameter configuration*/
-  hxspi2.Instance = XSPI2;
-  hxspi2.Init.FifoThresholdByte = 1;
-  hxspi2.Init.MemoryMode = HAL_XSPI_SINGLE_MEM;
-  hxspi2.Init.MemoryType = HAL_XSPI_MEMTYPE_MACRONIX;
-  hxspi2.Init.MemorySize = HAL_XSPI_SIZE_256MB;
-  hxspi2.Init.ChipSelectHighTimeCycle = 2;
-  hxspi2.Init.FreeRunningClock = HAL_XSPI_FREERUNCLK_DISABLE;
-  hxspi2.Init.ClockMode = HAL_XSPI_CLOCK_MODE_0;
-  hxspi2.Init.WrapSize = HAL_XSPI_WRAP_NOT_SUPPORTED;
-  hxspi2.Init.ClockPrescaler = 0;
-  hxspi2.Init.SampleShifting = HAL_XSPI_SAMPLE_SHIFT_NONE;
-  hxspi2.Init.DelayHoldQuarterCycle = HAL_XSPI_DHQC_ENABLE;
-  hxspi2.Init.ChipSelectBoundary = HAL_XSPI_BONDARYOF_NONE;
-  hxspi2.Init.MaxTran = 0;
-  hxspi2.Init.Refresh = 0;
-  hxspi2.Init.MemorySelect = HAL_XSPI_CSSEL_NCS1;
-  if (HAL_XSPI_Init(&hxspi2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sXspiManagerCfg.nCSOverride = HAL_XSPI_CSSEL_OVR_NCS1;
-  sXspiManagerCfg.IOPort = HAL_XSPIM_IOPORT_2;
-  if (HAL_XSPIM_Config(&hxspi2, &sXspiManagerCfg, HAL_XSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN XSPI2_Init 2 */
-
-  /* USER CODE END XSPI2_Init 2 */
-
-}
-
-/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -398,7 +387,6 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPION_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOF, MODEM_W_DIS1_Pin|EN_5V0_PWR_Pin, GPIO_PIN_RESET);

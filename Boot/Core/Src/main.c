@@ -135,7 +135,7 @@ int main(void)
   MX_SDMMC1_MMC_Init();
   MX_EXTMEM_MANAGER_Init();
   /* USER CODE BEGIN 2 */
-
+  EXTMEM_StatusTypeDef res = EXTMEM_MemoryMappedMode(EXTMEMORY_1, EXTMEM_ENABLE);
   HAL_MMC_CardInfoTypeDef cardInfo;
   	if (HAL_MMC_GetCardInfo(&hmmc1, &cardInfo) == HAL_OK) {
   		char msg[128];
@@ -156,8 +156,15 @@ int main(void)
   Boot_PrintString("       OTA BOOTLOADER STARTED\r\n");
   Boot_PrintString("========================================\r\n");
 
-  Boot_PrintString("[BOOT] Initializing XSPI2...\r\n");
-  MX_XSPI2_Init();
+
+  	uint8_t read_data[256] = {0};
+    uint8_t data[] = {0xDE, 0xED, 0xBE, 0xEF};
+    res = EXTMEM_MemoryMappedMode(EXTMEMORY_1, EXTMEM_DISABLE);
+    res = EXTMEM_Read(EXTMEMORY_1, 0x1000000, read_data, 256);
+    res = EXTMEM_EraseSector(EXTMEMORY_1, 0x1000000, 100);
+    res = EXTMEM_Write(EXTMEMORY_1, 0x1000000, data, sizeof data);
+    res = EXTMEM_Read(EXTMEMORY_1, 0x1000000, read_data, 4);
+
 
   Boot_PrintString("[BOOT] Checking for OTA update...\r\n");
   g_jumpAddress = OTA_Bootloader_Process();
@@ -165,8 +172,6 @@ int main(void)
   Boot_PrintString("[BOOT] Jump address: ");
   Boot_PrintHex(g_jumpAddress);
 
-  Boot_PrintString("[BOOT] Initializing ExtMemManager (XIP mode)...\r\n");
-  MX_EXTMEM_MANAGER_Init();
 
   Boot_PrintString("[BOOT] Jumping to application...\r\n");
   Boot_PrintString("========================================\r\n\r\n");

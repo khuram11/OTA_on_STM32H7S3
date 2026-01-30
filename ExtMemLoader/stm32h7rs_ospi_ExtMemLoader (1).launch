@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <launchConfiguration type="com.st.stm32cube.ide.mcu.debug.launch.launchConfigurationType">
     <stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.access_port_id" value="1"/>
-    <stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.cubeprog_external_loaders" value="[{&quot;fLoaderPath&quot;:&quot;C:\\Khuram Data\\stm32h7rs_ospi-main\\stm32h7rs_ospi-main\\ExtMemLoader\\Debug\\stm32h7rs_ospi_ExtMemLoader.stldr&quot;,&quot;fInitialize&quot;:false,&quot;fIsEnabled&quot;:true}]"/>
+    <stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.cubeprog_external_loaders" value="[]"/>
     <booleanAttribute key="com.st.stm32cube.ide.mcu.debug.launch.debug_auth__pwd_enable" value="false"/>
     <stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.debug_auth_certif_path" value=""/>
     <booleanAttribute key="com.st.stm32cube.ide.mcu.debug.launch.debug_auth_check_enable" value="false"/>
@@ -15,7 +15,7 @@
     <stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.ip_address_local" value="localhost"/>
     <booleanAttribute key="com.st.stm32cube.ide.mcu.debug.launch.limit_swo_clock.enabled" value="false"/>
     <stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.limit_swo_clock.value" value=""/>
-    <stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.loadList" value="{&quot;fItems&quot;:[{&quot;fIsFromMainTab&quot;:false,&quot;fPath&quot;:&quot;Debug/stm32h7rs_ospi_Boot.elf&quot;,&quot;fProjectName&quot;:&quot;stm32h7rs_ospi_Boot&quot;,&quot;fUseActiveBuildConfig&quot;:true,&quot;fPerformBuild&quot;:true,&quot;fDownload&quot;:true,&quot;fLoadSymbols&quot;:true},{&quot;fIsFromMainTab&quot;:true,&quot;fPath&quot;:&quot;Debug/stm32h7rs_ospi_Appli.elf&quot;,&quot;fProjectName&quot;:&quot;stm32h7rs_ospi_Appli&quot;,&quot;fPerformBuild&quot;:true,&quot;fDownload&quot;:true,&quot;fLoadSymbols&quot;:true}]}"/>
+    <stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.loadList" value="{&quot;fItems&quot;:[{&quot;fIsFromMainTab&quot;:true,&quot;fPath&quot;:&quot;Debug/stm32h7rs_ospi_ExtMemLoader.stldr&quot;,&quot;fProjectName&quot;:&quot;stm32h7rs_ospi_ExtMemLoader&quot;,&quot;fPerformBuild&quot;:true,&quot;fDownload&quot;:true,&quot;fLoadSymbols&quot;:true}]}"/>
     <stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.override_start_address_mode" value="default"/>
     <stringAttribute key="com.st.stm32cube.ide.mcu.debug.launch.remoteCommand" value="target remote"/>
     <booleanAttribute key="com.st.stm32cube.ide.mcu.debug.launch.startServer" value="true"/>
@@ -35,7 +35,7 @@
     <booleanAttribute key="com.st.stm32cube.ide.mcu.debug.stlink.enable_shared_stlink" value="false"/>
     <stringAttribute key="com.st.stm32cube.ide.mcu.debug.stlink.frequency" value="0"/>
     <booleanAttribute key="com.st.stm32cube.ide.mcu.debug.stlink.halt_all_on_reset" value="false"/>
-    <stringAttribute key="com.st.stm32cube.ide.mcu.debug.stlink.log_file" value="C:\Radek\7_Trainings\stm32h7r\cascading\projects\stm32h7rs_ospi\Appli\Debug\st-link_gdbserver_log.txt"/>
+    <stringAttribute key="com.st.stm32cube.ide.mcu.debug.stlink.log_file" value="C:\Khuram Data\stm32h7rs_ospi-main\stm32h7rs_ospi-main\ExtMemLoader\Debug\st-link_gdbserver_log.txt"/>
     <stringAttribute key="com.st.stm32cube.ide.mcu.debug.stlink.low_power_debug" value="enable"/>
     <stringAttribute key="com.st.stm32cube.ide.mcu.debug.stlink.max_halt_delay" value="2"/>
     <stringAttribute key="com.st.stm32cube.ide.mcu.debug.stlink.reset_strategy" value="connect_under_reset"/>
@@ -57,7 +57,7 @@
     <stringAttribute key="org.eclipse.cdt.debug.gdbjtag.core.jtagDeviceId" value="com.st.stm32cube.ide.mcu.debug.stlink"/>
     <stringAttribute key="org.eclipse.cdt.debug.gdbjtag.core.pcRegister" value=""/>
     <intAttribute key="org.eclipse.cdt.debug.gdbjtag.core.portNumber" value="61234"/>
-    <stringAttribute key="org.eclipse.cdt.debug.gdbjtag.core.runCommands" value="monitor reset"/>
+    <stringAttribute key="org.eclipse.cdt.debug.gdbjtag.core.runCommands" value=""/>
     <booleanAttribute key="org.eclipse.cdt.debug.gdbjtag.core.setPcRegister" value="false"/>
     <booleanAttribute key="org.eclipse.cdt.debug.gdbjtag.core.setResume" value="true"/>
     <booleanAttribute key="org.eclipse.cdt.debug.gdbjtag.core.setStopAt" value="true"/>
@@ -70,17 +70,16 @@
     <stringAttribute key="org.eclipse.cdt.launch.DEBUGGER_START_MODE" value="remote"/>
     <booleanAttribute key="org.eclipse.cdt.launch.DEBUGGER_STOP_AT_MAIN" value="true"/>
     <stringAttribute key="org.eclipse.cdt.launch.DEBUGGER_STOP_AT_MAIN_SYMBOL" value="main"/>
-    <stringAttribute key="org.eclipse.cdt.launch.PROGRAM_NAME" value="Debug/stm32h7rs_ospi_Appli.elf"/>
-    <stringAttribute key="org.eclipse.cdt.launch.PROJECT_ATTR" value="stm32h7rs_ospi_Appli"/>
+    <stringAttribute key="org.eclipse.cdt.launch.PROGRAM_NAME" value="Debug/stm32h7rs_ospi_ExtMemLoader.stldr"/>
+    <stringAttribute key="org.eclipse.cdt.launch.PROJECT_ATTR" value="stm32h7rs_ospi_ExtMemLoader"/>
     <booleanAttribute key="org.eclipse.cdt.launch.PROJECT_BUILD_CONFIG_AUTO_ATTR" value="true"/>
-    <stringAttribute key="org.eclipse.cdt.launch.PROJECT_BUILD_CONFIG_ID_ATTR" value="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.67709814"/>
+    <stringAttribute key="org.eclipse.cdt.launch.PROJECT_BUILD_CONFIG_ID_ATTR" value="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.2013466786"/>
     <booleanAttribute key="org.eclipse.debug.core.ATTR_FORCE_SYSTEM_CONSOLE_ENCODING" value="false"/>
     <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_PATHS">
-        <listEntry value="/stm32h7rs_ospi_Appli"/>
+        <listEntry value="/stm32h7rs_ospi_ExtMemLoader"/>
     </listAttribute>
     <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_TYPES">
         <listEntry value="4"/>
     </listAttribute>
-    <stringAttribute key="org.eclipse.dsf.launch.MEMORY_BLOCKS" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;no&quot;?&gt;&lt;memoryBlockExpressionList context=&quot;reserved-for-future-use&quot;&gt;&lt;gdbmemoryBlockExpression address=&quot;2415919104&quot; label=&quot;0x90000000&quot;/&gt;&lt;gdbmemoryBlockExpression address=&quot;536935712&quot; label=&quot;0x2000fd20&quot;/&gt;&lt;gdbmemoryBlockExpression address=&quot;1880096768&quot; label=&quot;0x70100000&quot;/&gt;&lt;gdbmemoryBlockExpression address=&quot;1895825408&quot; label=&quot;0x71000000&quot;/&gt;&lt;/memoryBlockExpressionList&gt;"/>
     <stringAttribute key="process_factory_id" value="com.st.stm32cube.ide.mcu.debug.launch.HardwareDebugProcessFactory"/>
 </launchConfiguration>

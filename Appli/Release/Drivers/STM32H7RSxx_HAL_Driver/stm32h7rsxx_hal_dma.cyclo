@@ -1,0 +1,16 @@
+C:/Khuram Data/stm32h7rs_ospi-main/stm32h7rs_ospi-main/Drivers/STM32H7RSxx_HAL_Driver/Src/stm32h7rsxx_hal_dma.c:374:19:HAL_DMA_Init	79
+C:/Khuram Data/stm32h7rs_ospi-main/stm32h7rs_ospi-main/Drivers/STM32H7RSxx_HAL_Driver/Src/stm32h7rsxx_hal_dma.c:469:19:HAL_DMA_DeInit	13
+C:/Khuram Data/stm32h7rs_ospi-main/stm32h7rs_ospi-main/Drivers/STM32H7RSxx_HAL_Driver/Src/stm32h7rsxx_hal_dma.c:594:19:HAL_DMA_Start	4
+C:/Khuram Data/stm32h7rs_ospi-main/stm32h7rs_ospi-main/Drivers/STM32H7RSxx_HAL_Driver/Src/stm32h7rsxx_hal_dma.c:649:19:HAL_DMA_Start_IT	6
+C:/Khuram Data/stm32h7rs_ospi-main/stm32h7rs_ospi-main/Drivers/STM32H7RSxx_HAL_Driver/Src/stm32h7rsxx_hal_dma.c:721:19:HAL_DMA_Abort	7
+C:/Khuram Data/stm32h7rs_ospi-main/stm32h7rs_ospi-main/Drivers/STM32H7RSxx_HAL_Driver/Src/stm32h7rsxx_hal_dma.c:813:19:HAL_DMA_Abort_IT	3
+C:/Khuram Data/stm32h7rs_ospi-main/stm32h7rs_ospi-main/Drivers/STM32H7RSxx_HAL_Driver/Src/stm32h7rsxx_hal_dma.c:849:19:HAL_DMA_PollForTransfer	17
+C:/Khuram Data/stm32h7rs_ospi-main/stm32h7rs_ospi-main/Drivers/STM32H7RSxx_HAL_Driver/Src/stm32h7rsxx_hal_dma.c:1021:6:HAL_DMA_IRQHandler	29
+C:/Khuram Data/stm32h7rs_ospi-main/stm32h7rs_ospi-main/Drivers/STM32H7RSxx_HAL_Driver/Src/stm32h7rsxx_hal_dma.c:1249:19:HAL_DMA_RegisterCallback	8
+C:/Khuram Data/stm32h7rs_ospi-main/stm32h7rs_ospi-main/Drivers/STM32H7RSxx_HAL_Driver/Src/stm32h7rsxx_hal_dma.c:1328:19:HAL_DMA_UnRegisterCallback	9
+C:/Khuram Data/stm32h7rs_ospi-main/stm32h7rs_ospi-main/Drivers/STM32H7RSxx_HAL_Driver/Src/stm32h7rsxx_hal_dma.c:1436:22:HAL_DMA_GetState	1
+C:/Khuram Data/stm32h7rs_ospi-main/stm32h7rs_ospi-main/Drivers/STM32H7RSxx_HAL_Driver/Src/stm32h7rsxx_hal_dma.c:1448:10:HAL_DMA_GetError	1
+C:/Khuram Data/stm32h7rs_ospi-main/stm32h7rs_ospi-main/Drivers/STM32H7RSxx_HAL_Driver/Src/stm32h7rsxx_hal_dma.c:1491:19:HAL_DMA_ConfigChannelAttributes	4
+C:/Khuram Data/stm32h7rs_ospi-main/stm32h7rs_ospi-main/Drivers/STM32H7RSxx_HAL_Driver/Src/stm32h7rsxx_hal_dma.c:1535:19:HAL_DMA_GetConfigChannelAttributes	3
+C:/Khuram Data/stm32h7rs_ospi-main/stm32h7rs_ospi-main/Drivers/STM32H7RSxx_HAL_Driver/Src/stm32h7rsxx_hal_dma.c:1569:19:HAL_DMA_LockChannelAttributes	2
+C:/Khuram Data/stm32h7rs_ospi-main/stm32h7rs_ospi-main/Drivers/STM32H7RSxx_HAL_Driver/Src/stm32h7rsxx_hal_dma.c:1601:19:HAL_DMA_GetLockChannelAttributes	3
