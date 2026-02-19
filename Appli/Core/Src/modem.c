@@ -462,6 +462,122 @@ Modem_Status_t Modem_WaitForATReady(uint32_t timeout)
     return MODEM_TIMEOUT;
 }
 
+void Modem_check_connection(void)
+{
+
+	char response[512];
+	    //setting sim PIN
+	//    printf("--- [CFG] setting SIM pin---\r\n");
+	//    Modem_SendCommand("AT+CPIN=\"8856\"\r\n", response, sizeof(response), 1000);
+	//    printf("\r\n");
+	//
+	//	HAL_Delay(5000);
+
+	//	Modem_SendCommand("AT+CFUN=0\r\n", response, sizeof(response), 1000);
+	//	printf("\r\n");
+	//
+	//	HAL_Delay(500);
+	//
+	//	Modem_SendCommand("AT+CFUN=1,0\r\n", response, sizeof(response), 1000);
+	//	printf("\r\n");
+	//
+	//    HAL_Delay(2000);
+
+
+
+	    /* SIM Status */
+	    printf("--- Test : AT+CPIN? (SIM Status) ---\r\n");
+	    if (Modem_SendCommand("AT+CPIN?\r\n", response, sizeof(response), 1000) == MODEM_OK)
+	    {
+	        if (strstr(response, "READY"))
+	            printf("  SIM: READY\r\n");
+	        else
+	        {
+	        	printf("  SIM: %s\r\n", response);
+	        }
+
+	    }
+	    printf("\r\n");
+
+
+	    /* Signal Strength */
+	    printf("--- Test 6: AT+CSQ (Signal) ---\r\n");
+	    if (Modem_SendCommand("AT+CSQ\r\n", response, sizeof(response), 1000) == MODEM_OK)
+	    {
+	        int rssi = 0, ber = 0;
+	        char *p = strstr(response, "+CSQ:");
+	        if (p && sscanf(p, "+CSQ: %d,%d", &rssi, &ber) == 2)
+	        {
+	            int dbm = (rssi == 99) ? -999 : (-113 + rssi * 2);
+	            printf("  Signal: %d dBm (rssi=%d)\r\n", dbm, rssi);
+	        }
+	    }
+	    printf("\r\n");
+
+	    /* IMEI */
+	    Modem_SendCommand("AT+CGREG?\r\n", response, sizeof(response), 1000);
+	    printf("\r\n");
+
+	    Modem_SendCommand("AT+CEREG?\r\n", response, sizeof(response), 1000);
+	    printf("\r\n");
+
+
+	    /* Operator */
+	    printf("--- Test 8: AT+COPS? (Operator) ---\r\n");
+	    if (Modem_SendCommand("AT+COPS?\r\n", response, sizeof(response), 2000) == MODEM_OK)
+	    {
+	        char *start = strstr(response, "\"");
+	        if (start)
+	        {
+	            start++;
+	            char *end = strstr(start, "\"");
+	            if (end)
+	            {
+	                *end = '\0';
+	                printf("  Operator: %s\r\n", start);
+	            }
+	        }
+	    }
+	    printf("\r\n");
+
+	    Modem_SendCommand("AT+CPSI?\r\n", response, sizeof(response), 1000);
+	    printf("\r\n");
+
+	    HAL_Delay(1000);
+
+	    Modem_SendCommand("AT+CGDCONT=1,\"IP\",\"iot.truphone.com\"\r\n", response, sizeof(response), 2000);
+	    printf("\r\n");
+	    HAL_Delay(1000);
+
+	    Modem_SendCommand("AT+CGDCONT?\r\n", response, sizeof(response), 2000);
+	    HAL_Delay(1000);
+
+	//    Modem_SendCommand("AT+CGACT=1,1\r\n", response, sizeof(response), 2000);
+	//    printf("\r\n");
+
+	//    HAL_Delay(500);
+
+
+	    HAL_Delay(1000);
+
+	    Modem_SendCommand("AT+CGPADDR=1\r\n", response, sizeof(response), 2000);
+	    printf("\r\n");
+
+	    HAL_Delay(2000);
+
+	    Modem_SendCommandWaitURC("AT+CPING=\"8.8.8.8\",1,4\r\n", "+CPING: 3", response, sizeof(response), 10000);
+	    printf("\r\n");
+	    Modem_PrintRxBuffer();
+
+	    HAL_Delay(1500);
+
+	//    Modem_SendCommand("AT+CDNSGIP=\"httpbin.org\"\r\n", response, sizeof(response), 5000);
+	//    printf("\r\n");
+
+	//    Modem_SendCommand("AT+CGDCONT?\r\n", response, sizeof(response), 10000);
+	//    printf("\r\n");
+}
+
 Modem_Status_t Modem_Init(void)
 {
     char response[256];
@@ -624,6 +740,8 @@ Modem_Status_t Modem_HTTP_ReadData(uint32_t offset, uint32_t length, char *data,
     char response[2048];
     uint32_t idx = 0;
 
+
+
     snprintf(cmd, sizeof(cmd), "AT+HTTPREAD=%lu,%lu\r\n", offset, length);
     printf("[TX] %s", cmd);
 
@@ -737,7 +855,7 @@ Modem_Status_t Modem_WaitForHTTPAction(int method, uint32_t timeout, int *httpSt
     {
         MX_USB_HOST_Process();
         USB_CDC_StartReceive();
-        HAL_Delay(2);
+        HAL_Delay(500);
         MX_USB_HOST_Process();
         USB_CDC_ProcessReceive();
 
@@ -789,12 +907,20 @@ Modem_Status_t Modem_HTTP_SimpleTest(void)
     int httpStatus = 0;
     uint32_t dataLen = 0;
 
+
+//    Modem_check_connection();
+
     printf("\r\n========== HTTP GET TEST ==========\r\n");
+    /* Cleanup */
+//    printf("[0] activating PDP..\r\n");
+//    Modem_SendCommand("AT+CGACT=0,1\r\n", response, sizeof(response), 15000);
+//    HAL_Delay(500);
+
 
     /* Cleanup */
     printf("[0] Cleanup...\r\n");
     Modem_SendCommand("AT+HTTPTERM\r\n", response, sizeof(response), 2000);
-    HAL_Delay(500);
+    HAL_Delay(1000);
 
     /* HTTPINIT */
     printf("[1] AT+HTTPINIT\r\n");
@@ -805,9 +931,11 @@ Modem_Status_t Modem_HTTP_SimpleTest(void)
     }
     HAL_Delay(300);
 
+    Modem_SendCommand("AT+HTTPPARA=?\r\n", response, sizeof(response), 2000);
+
     /* Set URL */
     printf("[2] AT+HTTPPARA URL\r\n");
-    if (Modem_SendCommand("AT+HTTPPARA=\"URL\",\"https://raw.githubusercontent.com/khuram11/ota_test/main/fw_with_crc.bin\"\r\n",
+    if (Modem_SendCommand("AT+HTTPPARA=\"URL\",\"http://httpbin.org\"\r\n",
                           response, sizeof(response), 2000) != MODEM_OK)
     {
         printf("    FAILED!\r\n");
@@ -820,10 +948,24 @@ Modem_Status_t Modem_HTTP_SimpleTest(void)
     printf("[3] AT+HTTPACTION=0\r\n");
     if (Modem_WaitForHTTPAction(0, 60000, &httpStatus, &dataLen) != MODEM_OK)
     {
-        printf("    TIMEOUT!\r\n");
+        printf("    TIMEOUT! Trying HTTPREAD fallback...\r\n");
+
+        /* Try reading data anyway (maybe URC was missed) */
+        if (Modem_SendCommand("AT+HTTPREAD=0,128\r\n",
+                              response, sizeof(response), 5000) == MODEM_OK)
+        {
+            printf("[FALLBACK DATA]\r\n%s\r\n", response);
+        }
+        else
+        {
+            printf("[FALLBACK FAILED]\r\n");
+        }
+
+        /* DO NOT terminate immediately for test */
         Modem_SendCommand("AT+HTTPTERM\r\n", response, sizeof(response), 1000);
         return MODEM_TIMEOUT;
     }
+
 
     printf("    HTTP Status: %d\r\n", httpStatus);
     printf("    Data Length: %lu bytes\r\n", dataLen);
@@ -969,7 +1111,7 @@ Modem_Status_t Modem_TestHTTP(void)
 /*============================================================================*/
 
 #define OTA_CHUNK_SIZE      330
-#define OTA_MAX_FW_SIZE     (50 * 1024)  /* 400KB max firmware */
+#define OTA_MAX_FW_SIZE     (100 * 1024)  /* 400KB max firmware */
 #define OTA_READ_TIMEOUT    10000
 
 /* Global firmware buffer - allocate in RAM */
@@ -1280,6 +1422,13 @@ Modem_Status_t OTA_DownloadFirmware(const char *url)
     g_fwDownloaded = 0;
     g_fwSize = 0;
 
+//    printf("[OTA] SSLCFG");
+//    Modem_SendCommand("AT+CSSLCFG=\"sslversion\",0,4\r\n", response, sizeof(response), 2000);
+//    HAL_Delay(500);
+//
+//    Modem_SendCommand("AT+CSSLCFG=\"authmode\",0,0\r\n", response, sizeof(response), 2000);
+//    HAL_Delay(100);
+
     /* Step 1: Initialize HTTP */
     printf("[OTA] Step 1: Initialize HTTP\r\n");
     Modem_SendCommand("AT+HTTPTERM\r\n", response, sizeof(response), 2000);
@@ -1291,6 +1440,9 @@ Modem_Status_t OTA_DownloadFirmware(const char *url)
         return MODEM_ERROR;
     }
     HAL_Delay(300);
+
+//    Modem_SendCommand("AT+HTTPPARA=\"SSLCFG\",0\r\n", response, sizeof(response), 2000);
+//    HAL_Delay(500);
 
     /* Step 2: Set URL */
     printf("[OTA] Step 2: Set URL\r\n");
@@ -1309,9 +1461,10 @@ Modem_Status_t OTA_DownloadFirmware(const char *url)
     /* Step 3: Execute GET request */
     printf("[OTA] Step 3: HTTP GET request\r\n");
 
-    if (Modem_WaitForHTTPAction(0, 60000, &httpStatus, &totalSize) != MODEM_OK)
+    if (Modem_WaitForHTTPAction(0, 30000, &httpStatus, &totalSize) != MODEM_OK)
     {
         printf("[OTA] HTTP request timeout!\r\n");
+        Modem_SendCommand("AT+HTTPHEAD\r\n", response, sizeof(response), 3000);
         Modem_SendCommand("AT+HTTPTERM\r\n", response, sizeof(response), 1000);
         return MODEM_TIMEOUT;
     }
@@ -1417,7 +1570,7 @@ Modem_Status_t OTA_DownloadFirmware(const char *url)
  */
 #define OTA_HEADER_SIZE   16
 #define OTA_MAGIC         0x4F544131  /* "OTA1" */
-Modem_Status_t OTA_VerifyFirmwareCRC(void)
+Modem_Status_t OTA_VerifyFirmwareCRC(uint32_t *fw_crc)
 {
     uint32_t magic;
     uint32_t fwSize;
@@ -1476,6 +1629,7 @@ Modem_Status_t OTA_VerifyFirmwareCRC(void)
     if (crc == expectedCRC)
     {
         printf("[OTA] CRC VALID\r\n");
+        *fw_crc = crc;
         return MODEM_OK;
     }
 
@@ -1488,7 +1642,7 @@ Modem_Status_t OTA_VerifyFirmwareCRC(void)
  */
 Modem_Status_t OTA_TestDownload(void)
 {
-    return OTA_DownloadFirmware("https://raw.githubusercontent.com/khuram11/ota_test/main/fw_with_crc.bin");
+    return OTA_DownloadFirmware("https://raw.githubusercontent.com/khuram11/ota_test/main/test_bin_crc.bin");
 }
 
 

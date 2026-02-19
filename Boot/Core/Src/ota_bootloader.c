@@ -20,11 +20,7 @@ extern UART_HandleTypeDef huart4;
 /*                          PRIVATE DEFINITIONS                               */
 /*============================================================================*/
 
-/*
- * OTA Mailbox location in AXI SRAM
- */
-#define OTA_SRAM_BASE           0x2406C000
-#define OTA_SRAM_SIZE           0x00020000  /* 128KB */
+
 #define OTA_MAX_FW_SIZE         (OTA_SRAM_SIZE - 32)
 
 /* Flash geometry */
@@ -39,7 +35,6 @@ typedef struct {
     uint8_t  fwData[];
 } OTA_Mailbox_t;
 
-#define OTA_MAILBOX             ((OTA_Mailbox_t *)OTA_SRAM_BASE)
 
 /* ExtMemManager memory ID */
 #ifndef EXTMEMORY_1
@@ -84,29 +79,6 @@ static void Boot_PrintHex32(const char *prefix, uint32_t val)
     HAL_UART_Transmit(&huart4, (uint8_t *)buf, len, 500);
 }
 
-static void Boot_EnableBackupDomain(void)
-{
-    RCC->APB4ENR |= RCC_APB4ENR_SBSEN;
-    __DSB();
-
-    PWR->CR1 |= PWR_CR1_DBP;
-
-    while ((PWR->CR1 & PWR_CR1_DBP) == 0);
-
-    for (volatile int i = 0; i < 1000; i++);
-}
-
-static uint32_t Boot_GetBootFlag(void)
-{
-    return TAMP->BKP0R;
-}
-
-static void Boot_ClearBootFlag(void)
-{
-    Boot_EnableBackupDomain();
-    TAMP->BKP0R = BOOT_FLAG_NORMAL;
-}
-
 static uint32_t Boot_CalculateCRC32(uint8_t *data, uint32_t len)
 {
     uint32_t crc = 0xFFFFFFFF;
@@ -124,168 +96,6 @@ static uint32_t Boot_CalculateCRC32(uint8_t *data, uint32_t len)
     }
 
     return crc ^ 0xFFFFFFFF;
-}
-
-/*============================================================================*/
-/*                    FLASH OPERATIONS VIA EXTMEM                             */
-/*============================================================================*/
-
-static OTA_Boot_Status_t Boot_WriteFirmwareToFlash(uint32_t flashAddr,
-                                                    uint8_t *data,
-                                                    uint32_t size)
-{
-    EXTMEM_StatusTypeDef status;
-    uint32_t blockCount;
-    uint32_t eraseAddr;
-
-    Boot_Print("[BOOT] Writing firmware to flash\r\n");
-    Boot_PrintHex32("       Flash addr: ", flashAddr);
-    Boot_PrintHex32("       Size: ", size);
-
-    /* Disable memory-mapped mode */
-    Boot_Print("[BOOT] Disabling memory-mapped mode...\r\n");
-
-    status = EXTMEM_MemoryMappedMode(EXTMEMORY_1, EXTMEM_DISABLE);
-    if (status != EXTMEM_OK)
-    {
-        Boot_Print("[BOOT] Note: Mapped mode disable returned ");
-        Boot_PrintHex32("", (uint32_t)status);
-    }
-
-    /* Erase blocks */
-    blockCount = (size + FLASH_BLOCK_SIZE_64K - 1) / FLASH_BLOCK_SIZE_64K;
-    Boot_PrintHex32("[BOOT] Erasing blocks: ", blockCount);
-
-    for (uint32_t i = 0; i < blockCount; i++)
-    {
-        eraseAddr = flashAddr + (i * FLASH_BLOCK_SIZE_64K);
-
-        Boot_Print(".");
-
-        status = EXTMEM_EraseSector(EXTMEMORY_1, eraseAddr, FLASH_BLOCK_SIZE_64K);
-
-        if (status != EXTMEM_OK)
-        {
-            Boot_Print("\r\n[BOOT] ERASE FAILED!\r\n");
-            Boot_PrintHex32("       Address: ", eraseAddr);
-            Boot_PrintHex32("       Status: ", (uint32_t)status);
-            return OTA_BOOT_FLASH_ERROR;
-        }
-    }
-    Boot_Print(" Done\r\n");
-
-    /* Program data */
-    Boot_Print("[BOOT] Programming...\r\n");
-
-    status = EXTMEM_Write(EXTMEMORY_1, flashAddr, data, size);
-
-    if (status != EXTMEM_OK)
-    {
-        Boot_Print("[BOOT] PROGRAM FAILED!\r\n");
-        Boot_PrintHex32("       Status: ", (uint32_t)status);
-        return OTA_BOOT_FLASH_ERROR;
-    }
-
-    Boot_Print("[BOOT] Programming complete!\r\n");
-
-    /* Re-enable memory-mapped mode */
-    Boot_Print("[BOOT] Re-enabling memory-mapped mode...\r\n");
-
-    status = EXTMEM_MemoryMappedMode(EXTMEMORY_1, EXTMEM_ENABLE);
-    if (status != EXTMEM_OK)
-    {
-        Boot_Print("[BOOT] Note: Re-enable mapped mode returned ");
-        Boot_PrintHex32("", (uint32_t)status);
-    }
-
-    return OTA_BOOT_OK;
-}
-
-/*============================================================================*/
-/*                          PUBLIC FUNCTIONS                                  */
-/*============================================================================*/
-
-uint32_t OTA_Bootloader_Process(void)
-{
-    uint32_t bootFlag;
-    uint32_t calculatedCRC;
-    OTA_Boot_Status_t status;
-
-    Boot_Print("\r\n========================================\r\n");
-    Boot_Print("       OTA UPDATE CHECK\r\n");
-    Boot_Print("========================================\r\n");
-
-    Boot_EnableBackupDomain();
-
-    bootFlag = Boot_GetBootFlag();
-    Boot_PrintHex32("[BOOT] Boot flag: ", bootFlag);
-
-    if (bootFlag != BOOT_FLAG_UPDATE)
-    {
-        Boot_Print("[BOOT] No update pending\r\n");
-        Boot_Print("[BOOT] Booting Slot A\r\n");
-        Boot_Print("========================================\r\n\r\n");
-        return SLOT_A_CPU_ADDR;
-    }
-
-    Boot_Print("[BOOT] *** UPDATE PENDING ***\r\n");
-
-    Boot_ClearBootFlag();
-    Boot_Print("[BOOT] Boot flag cleared\r\n");
-
-    Boot_PrintHex32("[BOOT] Mailbox magic: ", OTA_MAILBOX->magic);
-
-    if (OTA_MAILBOX->magic != OTA_MAGIC)
-    {
-        Boot_Print("[BOOT] ERROR: Invalid mailbox!\r\n");
-        Boot_Print("[BOOT] Falling back to Slot A\r\n");
-        return SLOT_A_CPU_ADDR;
-    }
-
-    Boot_Print("[BOOT] Firmware info:\r\n");
-    Boot_PrintHex32("       Size: ", OTA_MAILBOX->fwSize);
-    Boot_PrintHex32("       Version: ", OTA_MAILBOX->version);
-    Boot_PrintHex32("       Expected CRC: ", OTA_MAILBOX->expectedCRC);
-
-    if (OTA_MAILBOX->fwSize == 0 || OTA_MAILBOX->fwSize > OTA_MAX_FW_SIZE)
-    {
-        Boot_Print("[BOOT] ERROR: Invalid firmware size!\r\n");
-        Boot_PrintHex32("       Max: ", OTA_MAX_FW_SIZE);
-        return SLOT_A_CPU_ADDR;
-    }
-
-    Boot_Print("[BOOT] Calculating CRC...\r\n");
-    calculatedCRC = Boot_CalculateCRC32(OTA_MAILBOX->fwData, OTA_MAILBOX->fwSize);
-    Boot_PrintHex32("       Calculated: ", calculatedCRC);
-
-    if (calculatedCRC != OTA_MAILBOX->expectedCRC)
-    {
-        Boot_Print("[BOOT] ERROR: CRC mismatch!\r\n");
-        Boot_Print("[BOOT] Falling back to Slot A\r\n");
-        return SLOT_A_CPU_ADDR;
-    }
-
-    Boot_Print("[BOOT] CRC valid!\r\n");
-    Boot_Print("[BOOT] Writing to Slot B...\r\n");
-
-    status = Boot_WriteFirmwareToFlash(SLOT_B_FLASH_ADDR,
-                                       OTA_MAILBOX->fwData,
-                                       OTA_MAILBOX->fwSize);
-
-    if (status != OTA_BOOT_OK)
-    {
-        Boot_Print("[BOOT] ERROR: Flash write failed!\r\n");
-        Boot_Print("[BOOT] Falling back to Slot A\r\n");
-        return SLOT_A_CPU_ADDR;
-    }
-
-    OTA_MAILBOX->magic = 0;
-
-    Boot_Print("[BOOT] *** UPDATE SUCCESSFUL ***\r\n");
-    Boot_Print("[BOOT] Booting Slot B\r\n");
-    Boot_Print("========================================\r\n\r\n");
-
-    return SLOT_B_CPU_ADDR;
 }
 
 /**

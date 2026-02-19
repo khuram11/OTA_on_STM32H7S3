@@ -34,7 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define LAST_SECTOR_ADDR    0x1FFF000
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -135,39 +135,24 @@ int main(void)
   MX_SDMMC1_MMC_Init();
   MX_EXTMEM_MANAGER_Init();
   /* USER CODE BEGIN 2 */
-  EXTMEM_StatusTypeDef res = EXTMEM_MemoryMappedMode(EXTMEMORY_1, EXTMEM_ENABLE);
-  HAL_MMC_CardInfoTypeDef cardInfo;
-  	if (HAL_MMC_GetCardInfo(&hmmc1, &cardInfo) == HAL_OK) {
-  		char msg[128];
-  		uint64_t totalSize = (uint64_t) cardInfo.LogBlockNbr
-  				* cardInfo.LogBlockSize;
-
-  		sprintf(msg, "eMMC size: %lu blocks of %lu bytes = %.2f MB\r\n",
-  				cardInfo.LogBlockNbr, cardInfo.LogBlockSize,
-  				(float) totalSize / (1024 * 1024));
-
-  		HAL_UART_Transmit(&huart4, (uint8_t*) msg, strlen(msg), HAL_MAX_DELAY);
-  	} else {
-  		char *err = "Error getting eMMC card info\r\n";
-  		HAL_UART_Transmit(&huart4, (uint8_t*) err, strlen(err), HAL_MAX_DELAY);
-  	}
 
   Boot_PrintString("\r\n========================================\r\n");
   Boot_PrintString("       OTA BOOTLOADER STARTED\r\n");
   Boot_PrintString("========================================\r\n");
 
 
-  	uint8_t read_data[256] = {0};
-    uint8_t data[] = {0xDE, 0xED, 0xBE, 0xEF};
-    res = EXTMEM_MemoryMappedMode(EXTMEMORY_1, EXTMEM_DISABLE);
-    res = EXTMEM_Read(EXTMEMORY_1, 0x1000000, read_data, 256);
-    res = EXTMEM_EraseSector(EXTMEMORY_1, 0x1000000, 100);
-    res = EXTMEM_Write(EXTMEMORY_1, 0x1000000, data, sizeof data);
-    res = EXTMEM_Read(EXTMEMORY_1, 0x1000000, read_data, 4);
-
-
-  Boot_PrintString("[BOOT] Checking for OTA update...\r\n");
-  g_jumpAddress = OTA_Bootloader_Process();
+  	uint8_t crc[4] = {0};
+  	EXTMEM_StatusTypeDef res = EXTMEM_MemoryMappedMode(EXTMEMORY_1, EXTMEM_DISABLE);
+    res = EXTMEM_Read(EXTMEMORY_1, LAST_SECTOR_ADDR, crc, 4);
+    (void)res;
+    uint32_t crc_32 = (crc[0]  << 24) | (crc[0]  << 16) | (crc[0]  << 8) | (crc[0] & 0xFF);
+    if(crc_32 ==  0xFFFFFFFF )
+    {
+    	g_jumpAddress = SLOT_A_CPU_ADDR;
+    }else
+    {
+    	g_jumpAddress = SLOT_B_CPU_ADDR;
+    }
 
   Boot_PrintString("[BOOT] Jump address: ");
   Boot_PrintHex(g_jumpAddress);

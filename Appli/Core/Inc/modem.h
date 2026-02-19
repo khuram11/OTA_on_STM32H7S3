@@ -40,7 +40,7 @@ Modem_Status_t Modem_WaitForHTTPAction(int method, uint32_t timeout, int *httpSt
 Modem_Status_t Modem_SendCommandWaitURC(const char *cmd, const char *expectedURC,
                                          char *response, uint32_t maxLen,
                                          uint32_t timeout);
-
+Modem_Status_t Modem_SendCommand(const char *cmd, char *response, uint32_t maxLen, uint32_t timeout);
 /* OTA Status codes */
 typedef enum {
     OTA_OK = 0,
@@ -57,9 +57,9 @@ Modem_Status_t OTA_TestDownload(void);
 OTA_Status_t OTA_DownloadFirmware_v2(const char *url, uint32_t *downloadedSize);
 
 
-Modem_Status_t OTA_VerifyFirmwareCRC(void);
+Modem_Status_t OTA_VerifyFirmwareCRC(uint32_t *fw_crc);
 
-
+Modem_Status_t Modem_HTTP_SimpleTest(void);
 
 void Modem_TestHTTPS_OTA(void);
 uint8_t* OTA_GetFirmwareBuffer(void);

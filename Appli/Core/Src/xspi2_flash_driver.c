@@ -15,9 +15,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "xspi2_flash_driver.h"
 /* ============================================================================
  * CONFIGURATION
  * ============================================================================ */
+#define LAST_SECTOR_ADDR    0x1FFF000
+
 
 /* Set to 1 for Octal DTR mode, 0 for standard SPI */
 /* NOTE: Set this to match your flash's CURRENT mode (not memory-mapped config) */
@@ -30,34 +33,12 @@
  * RAM PLACEMENT ATTRIBUTES
  * ============================================================================ */
 
-#if defined(__GNUC__)
-    #define RAM_FUNC    __attribute__((section(".RamFunc"), noinline, used))
-    #define RAM_DATA    __attribute__((section(".RamData")))
-#elif defined(__ICCARM__)
-    #define RAM_FUNC    __ramfunc
-    #define RAM_DATA    __no_init
-#elif defined(__ARMCC_VERSION)
-    #define RAM_FUNC    __attribute__((section("RamFunc")))
-    #define RAM_DATA    __attribute__((section("RamData")))
-#else
-    #define RAM_FUNC
-    #define RAM_DATA
-#endif
 
 /* ============================================================================
  * RETURN CODES
  * ============================================================================ */
 
-typedef enum {
-    FLASH_OK = 0,
-    FLASH_ERROR_TIMEOUT,
-    FLASH_ERROR_BUSY,
-    FLASH_ERROR_WRITE_ENABLE,
-    FLASH_ERROR_PROGRAM,
-    FLASH_ERROR_ERASE,
-    FLASH_ERROR_VERIFY,
-    FLASH_ERROR_INVALID_PARAM
-} FlashStatus_t;
+
 
 /* ============================================================================
  * FLASH PARAMETERS - MX25UW25645G
@@ -1381,6 +1362,58 @@ RAM_FUNC FlashStatus_t FlashTest_Basic(void)
     
     return FLASH_OK;
 }
+
+#define OTA_FLASH_OFFSET    0x01000000
+#define CHUNK_SIZE          4096  /* Process 4KB at a time */
+
+FlashStatus_t Store_Firmware(uint8_t *fw_data, uint32_t fw_size)
+{
+    FlashStatus_t status = FLASH_OK;
+    uint32_t offset = 0;
+    uint32_t erase_addr;
+    uint32_t primask;
+
+    primask = irq_disable();
+    Flash_ExitMemoryMapped();
+
+    /* 1. Erase all required blocks (64KB chunks for speed) */
+    erase_addr = OTA_FLASH_OFFSET;
+    while ((erase_addr < OTA_FLASH_OFFSET + fw_size) && (status == FLASH_OK)) {
+        status = Flash_EraseBlock64K(erase_addr);
+        erase_addr += 0x10000;  /* 64KB */
+    }
+
+    /* 2. Program in 4KB chunks */
+    while ((offset < fw_size) && (status == FLASH_OK)) {
+        uint32_t chunk = (fw_size - offset > 4096) ? 4096 : (fw_size - offset);
+        status = Flash_Program(OTA_FLASH_OFFSET + offset, fw_data + offset, chunk);
+        offset += chunk;
+    }
+
+    Flash_EnableMemoryMapped();
+    irq_restore(primask);
+
+    return status;
+}
+
+
+
+
+
+/* Store CRC */
+void store_crc(uint32_t crc)
+{
+	uint8_t buf[4] =
+	{
+    crc & 0xFF,
+    (crc >> 8) & 0xFF,
+    (crc >> 16) & 0xFF,
+    (crc >> 24) & 0xFF
+	};
+
+	Flash_OTA_Write(LAST_SECTOR_ADDR, buf, 4, 1);
+}
+
 
 RAM_FUNC int Test_Flash_Write(void)
 {

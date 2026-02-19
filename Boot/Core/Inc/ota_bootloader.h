@@ -28,9 +28,7 @@
 #define SLOT_A_CPU_ADDR         0x70000000  /* Memory-mapped address */
 #define SLOT_B_CPU_ADDR         0x71000000
 
-/* OTA mailbox in AXI SRAM (must match Appli!) */
-#define OTA_SRAM_BASE           0x2406C000
-#define OTA_SRAM_SIZE           0x00020000  /* 128KB */
+
 
 /*============================================================================*/
 /*                          STATUS CODES                                      */
@@ -49,12 +47,6 @@ typedef enum {
 /*                          FUNCTIONS                                         */
 /*============================================================================*/
 
-/**
- * @brief  Process OTA update if pending
- * @note   Call BEFORE MX_EXTMEM_MANAGER_Init() or after disabling mapped mode
- * @retval Jump address (SLOT_A_CPU_ADDR or SLOT_B_CPU_ADDR)
- */
-uint32_t OTA_Bootloader_Process(void);
 
 /**
  * @brief  Jump to application

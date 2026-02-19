@@ -22,7 +22,22 @@
     #define RAM_DATA
 #endif
 
+typedef enum {
+    FLASH_OK = 0,
+    FLASH_ERROR_TIMEOUT,
+    FLASH_ERROR_BUSY,
+    FLASH_ERROR_WRITE_ENABLE,
+    FLASH_ERROR_PROGRAM,
+    FLASH_ERROR_ERASE,
+    FLASH_ERROR_VERIFY,
+    FLASH_ERROR_INVALID_PARAM
+} FlashStatus_t;
+
+
 
 RAM_FUNC int Test_Flash_Write(void);
+
+RAM_FUNC FlashStatus_t Store_Firmware(uint8_t *fw_data, uint32_t fw_size);
+void store_crc(uint32_t crc);
 
 #endif /* INC_XSPI2_FLASH_DRIVER_H_ */

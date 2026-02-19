@@ -41,8 +41,8 @@ _estack = ORIGIN(DTCM) + LENGTH(DTCM); /* end of "DTCM" Ram type memory */
 _Min_Heap_Size = 0x200; /* required amount of heap */
 _Min_Stack_Size = 0x400; /* required amount of stack */
 
-__FLASH_BEGIN  = 0x71000000;
-__FLASH_SIZE   = 0x01000000;
+__FLASH_BEGIN  = 0x70000000;
+__FLASH_SIZE   = 0x02000000;
 
 
 __RAM_BEGIN    = 0x24000000;

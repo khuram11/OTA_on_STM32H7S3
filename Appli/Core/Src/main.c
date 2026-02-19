@@ -22,10 +22,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-//#include "modem.h"
+#include "modem.h"
 #include <stdio.h>
 #include <string.h>
-//#include "xspi2_flash_driver.h"
+#include "xspi2_flash_driver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -51,8 +51,9 @@ UART_HandleTypeDef huart4;
 
 /* USER CODE BEGIN PV */
 
-
+volatile uint8_t cmd_received = 0;
 uint8_t uart4_rx_byte;
+uint8_t uart4_rx_buf[100];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -92,6 +93,15 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         }
         HAL_UART_Receive_IT(&huart4, &uart4_rx_byte, 1);
    }
+}
+
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
+    if (huart->Instance == UART4)
+    {
+    	cmd_received = 1;
+    	HAL_UARTEx_ReceiveToIdle_IT(&huart4, uart4_rx_buf, 100);
+    }
 }
 
 
@@ -144,98 +154,76 @@ int main(void)
   MX_SDMMC1_MMC_Init();
   MX_SBS_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Receive_IT(&huart4, &uart4_rx_byte, 1);
-  printf("OTA APPLICATION STARTED\r\n");
-  while(1)
+//  HAL_UART_Receive_IT(&huart4, &uart4_rx_byte, 1);
+  HAL_UARTEx_ReceiveToIdle_IT(&huart4, uart4_rx_buf, 100);
+  printf("MAIN APPLICATION STARTED\r\n");
+
+
+
+  HAL_PWREx_EnableUSBHSregulator();
+  HAL_Delay(100);
+
+  MX_USB_HOST_Init();
+
+  //disabling SOF interrupts
+  USB_OTG_HS->GINTMSK &= ~USB_OTG_GINTMSK_SOFM;
+  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
+
+  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, 1);
+
+
+
+
+
+  if(MODEM_OK != Modem_Init())
   {
-	  printf("OTA APPLICATION runnning\r\n");
-	  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-	  HAL_Delay(5000);
+	  printf("[MODEM] FAILED to Initialize the Modem\r\n");
+//	  while(1);
   }
 
-//  if(0 == Test_Flash_Write())
-//  {
-//	  //Flast test succesful
-//	  while(1);
-//  }
-//  uint8_t read_data[10] = {0};
-//  uint8_t data[] = {0xDE, 0xED, 0xBE, 0xEF};
-//  EXTMEM_StatusTypeDef res =EXTMEM_MemoryMappedMode(EXTMEMORY_1, EXTMEM_DISABLE);
-//  res = EXTMEM_Read(EXTMEMORY_1, 0x1000000, read_data, 4);
-//  res = EXTMEM_EraseSector(EXTMEMORY_1, 0x1000000, 100);
-//  res = EXTMEM_Write(EXTMEMORY_1, 0x1000000, data, sizeof data);
-//  res = EXTMEM_Read(EXTMEMORY_1, 0x1000000, read_data, 4);
 
-//  while(1);
-//
-//
-//
-//  HAL_MMC_CardInfoTypeDef cardInfo;
-//  	if (HAL_MMC_GetCardInfo(&hmmc1, &cardInfo) == HAL_OK) {
-//  		char msg[128];
-//  		uint64_t totalSize = (uint64_t) cardInfo.LogBlockNbr
-//  				* cardInfo.LogBlockSize;
-//
-//  		sprintf(msg, "eMMC size: %lu blocks of %lu bytes = %.2f MB\r\n",
-//  				cardInfo.LogBlockNbr, cardInfo.LogBlockSize,
-//  				(float) totalSize / (1024 * 1024));
-//
-//  		HAL_UART_Transmit(&huart4, (uint8_t*) msg, strlen(msg), HAL_MAX_DELAY);
-//  	} else {
-//  		char *err = "Error getting eMMC card info\r\n";
-//  		HAL_UART_Transmit(&huart4, (uint8_t*) err, strlen(err), HAL_MAX_DELAY);
-//  	}
-//
-//  HAL_PWREx_EnableUSBHSregulator();
 //  HAL_Delay(100);
-//
-//  MX_USB_HOST_Init();
-//
-//  //disabling SOF interrupts
-//  USB_OTG_HS->GINTMSK &= ~USB_OTG_GINTMSK_SOFM;
-//  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
-//
-//  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, 1);
-
-//  uint8_t data[] = {0xDE, 0xED, 0xBE, 0xEF};
-//  EXTMEM_StatusTypeDef res = EXTMEM_MemoryMappedMode(EXTMEMORY_1, EXTMEM_DISABLE);
-
-//  res = EXTMEM_WriteInMappedMode(EXTMEMORY_1, 0x71000000, data, sizeof(data));
-
-//  while(1);
-
-
-
-
-//  if(MODEM_OK != Modem_Init())
-//  {
-//	  printf("[MODEM] FAILED to Initialize the Modem\r\n");
-//	  while(1);
-//  }
-
-
-
 
 // Modem_HTTP_SimpleTest();
 
 // OTA_TestChunkSizes();
+//
+  if (OTA_TestDownload() == MODEM_OK)
+  {
+      printf("Firmware downloaded successfully!\r\n");
 
-//  if (OTA_TestDownload() == MODEM_OK)
-//  {
-//      printf("Firmware downloaded successfully!\r\n");
-//
-//      /* Access the firmware data */
-//      uint8_t *fw = OTA_GetFirmwareBuffer();
-//
-//      uint32_t size = OTA_GetFirmwareSize();
-//      printf("Size : %ld\n", size);
-//      /* Now you can flash it or verify CRC */
-//      if(OTA_VerifyFirmwareCRC() == MODEM_OK)
-//      {
-//
-//      }
-//
-//  }
+      /* Access the firmware data */
+      uint8_t *fw = OTA_GetFirmwareBuffer();
+
+      uint32_t size = OTA_GetFirmwareSize();
+      printf("Size : %ld\n", size);
+      /* Now you can flash it or verify CRC */
+      uint32_t firmware_crc= 0;
+      if(OTA_VerifyFirmwareCRC(&firmware_crc) == MODEM_OK)
+      {
+    	  printf("Testing Flash Write \r\n");
+    	  if(0 == Test_Flash_Write())
+    	  {
+    		  printf("Flash Write Successful \r\n");
+    		  //write crc at the last page.
+
+    		  //store the firmware
+    		  printf("Storing firmware \r\n");
+    		  FlashStatus_t status =  Store_Firmware((fw + 16) , (size - 16)); // remove the header.
+    		  if( FLASH_OK == status)
+    		  {
+    			  printf("Successfully stored firmware in  Flash \r\n");
+    			  printf("Storing CRC \r\n");
+    			  store_crc(firmware_crc);
+    			  printf("Restarting \r\n");
+    			  HAL_NVIC_SystemReset();
+    		  }else printf("Failed to stored firmware in  Flash \r\n");
+    		  //restart to jump to new section.
+
+    	  }else printf("Flash Write Failed \r\n");
+
+      }
+  }
 
   /* USER CODE END 2 */
 
@@ -243,25 +231,29 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-//	  HAL_Delay(50000);
-//	  if (OTA_TestDownload() == MODEM_OK)
-//	  {
-//	      printf("Firmware downloaded successfully!\r\n");
-//
-//	      /* Access the firmware data */
-//	      uint8_t *fw = OTA_GetFirmwareBuffer();
-//	      (void)fw;
-//	      uint32_t size = OTA_GetFirmwareSize();
-//	      printf("Size : %ld\n", size);
-//	      /* Now you can flash it or verify CRC */
-//	       OTA_VerifyFirmwareCRC();
-//	  }
-//
-//    /* USER CODE END WHILE */
-//    MX_USB_HOST_Process();
-//
-//    /* USER CODE BEGIN 3 */
+    /* USER CODE END WHILE */
+    MX_USB_HOST_Process();
+
+    /* USER CODE BEGIN 3 */
 //	  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+    if(cmd_received)
+    {
+    	if(strstr((char *)uart4_rx_buf , "turn off"))
+    	{
+    		printf("turing off sim module safely\r\n");
+    		HAL_GPIO_WritePin(MODEM_PWR_OFF_GPIO_Port, MODEM_PWR_OFF_Pin, 0);
+    		memset((char *)uart4_rx_buf, 0x00, sizeof uart4_rx_buf);
+    	}else
+    	{
+			char response[512] = {0};
+			cmd_received = 0;
+			strcat((char *)uart4_rx_buf , "\r\n");
+			Modem_SendCommand((char *)uart4_rx_buf, response, sizeof response, 5000);
+			memset((char *)uart4_rx_buf, 0x00, sizeof uart4_rx_buf);
+    	}
+
+
+    }
 
   }
   /* USER CODE END 3 */
